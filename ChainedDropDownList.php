@@ -8,6 +8,7 @@
 namespace himiklab\chained;
 
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\widgets\InputWidget;
 use yii\base\InvalidConfigException;
 
@@ -67,6 +68,12 @@ class ChainedDropDownList extends InputWidget
         if (empty($this->remote) || !isset($this->remote['id'], $this->remote['url'])) {
             throw new InvalidConfigException('Option "remote" is not set.');
         }
+
+        if (is_array($this->remote['id'])) {
+            $this->remote['id'] = '#' . implode(', #', $this->remote['id']);
+        } else {
+            $this->remote['id'] = '#' . $this->remote['id'];
+        }
     }
 
     public function run()
@@ -83,8 +90,14 @@ class ChainedDropDownList extends InputWidget
         $id = $this->options['id'];
         $remoteOptions = $this->remote;
 
+        $options = [
+            'parents' => $remoteOptions['id'],
+            'url' => $remoteOptions['url']
+        ];
+        $options = Json::encode($options);
+
         $view->registerJs(
-            "$('#{$id}').remoteChained('#{$remoteOptions['id']}', '{$remoteOptions['url']}');"
+            "$('#{$id}').remoteChained($options);"
         );
         ChainedDropDownListAsset::register($view);
     }

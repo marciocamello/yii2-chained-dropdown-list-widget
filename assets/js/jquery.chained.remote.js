@@ -9,24 +9,20 @@
  * Project home:
  *   http://www.appelsiini.net/projects/chained
  *
- * Version: 0.9.10
+ * Version: 1.0.0
  *
  */
 
 ;(function($, window, document, undefined) {
     "use strict";
 
-    $.fn.remoteChained = function(parents, url, options) {
+    $.fn.remoteChained = function(options) {
 
-        var settings;
-        /* New style syntax. */
-        if ("object" === typeof(parents) && "undefined" !== typeof(parents.url)) {
-            settings = $.extend({}, $.fn.remoteChained.defaults, parents);
-        /* Still support old style syntax. */
-        } else {
-            settings = $.extend({}, $.fn.remoteChained.defaults, options);
-            settings.parents = parents;
-            settings.url = url;
+        var settings = $.extend({}, $.fn.remoteChained.defaults, options);
+
+        /* Loading text always clears the select. */
+        if (settings.loading) {
+            settings.clear = true;
         }
 
         return this.each(function() {
@@ -42,7 +38,7 @@
                     var data = {};
                     $(settings.parents).each(function() {
                         var id = $(this).attr(settings.attribute);
-                        var value = $(":selected", this).val();
+                        var value = ($(this).is("select") ? $(":selected", this) : $(this)).val();
                         data[id] = value;
 
                         /* Optionally also depend on values from these inputs. */
@@ -102,9 +98,19 @@
 
                 var option_list = [];
                 if ($.isArray(json)) {
-                    /* JSON is already an array (which preserves the ordering of options) */
-                    /* [["","--"],["series-1","1 series"],["series-3","3 series"]] */
-                    option_list = json;
+                    if ($.isArray(json[0])) {
+                        /* JSON is already an array of arrays. */
+                        /* [["","--"],["series-1","1 series"],["series-3","3 series"]] */
+                        option_list = json;
+                    } else {
+                        /* JSON is an array of objects. */
+                        /* [{"":"--"},{"series-1":"1 series"},{"series-3":"3 series"}] */
+                        option_list = $.map(json, function(value) {
+                            return $.map(value, function(value, index) {
+                                return [[index, value]];
+                            });
+                        });
+                    }
                 } else {
                     /* JSON is an JavaScript object. Rebuild it as an array. */
                     /* {"":"--","series-1":"1 series","series-3":"3 series"} */
@@ -131,7 +137,7 @@
 
                 /* Loop option again to set selected. IE needed this... */
                 $(self).children().each(function() {
-                    if ($(this).val() === selected_key) {
+                    if ($(this).val() === selected_key + "") {
                         $(this).attr("selected", "selected");
                     }
                 });
